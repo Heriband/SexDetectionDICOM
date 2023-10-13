@@ -8,12 +8,12 @@ import math
 import csv 
 
 pixelReplace = 1
-pourcentage = 7
+pourcentage = 3
 taille_fenetre = 800
 columlnSex = 4
 
 id_patient = 1
-Max_id_patient = 39
+Max_id_patient = 9
 nom_fichier_csv = "C:/Users/Sanchez/Documents/JFR/SexDetectionDICOM/labels1.csv"
 
 
@@ -78,7 +78,7 @@ def cancelNoise(data):
 
 
 
-for id_patient in range(17,Max_id_patient):
+for id_patient in range(0,Max_id_patient):
     try: 
         path = 'C:/Users/Sanchez/Documents/JFR/DATA/patient_' + str(id_patient)
 
@@ -90,7 +90,7 @@ for id_patient in range(17,Max_id_patient):
 
         derniers_fichiers_dicom = []
         derniers_fichiers_dicom_brut = [] 
-        for ind in range(0, len(fichiers_dicom[-nombre_a_afficher:]), 2):
+        for ind in range(0, len(fichiers_dicom[-nombre_a_afficher:]), 1):
             dernier_fichier = pydicom.dcmread(fichiers_dicom[-nombre_a_afficher:][ind])
             derniers_fichiers_dicom_brut.append(dernier_fichier)
             derniers_fichiers_dicom.append(dernier_fichier.pixel_array)
@@ -99,12 +99,11 @@ for id_patient in range(17,Max_id_patient):
         derniers_fichiers_dicom_WT_Noise =  list(map(cancelNoise, derniers_fichiers_dicom_brut))
 
         Bone_Image = []
+
+        femur_center = nb_bone(derniers_fichiers_dicom_WT_Noise[-1])
         for fichier in derniers_fichiers_dicom_WT_Noise:
             image_matrice = fichier
-            mean_pixel, max_pixel = np.mean(image_matrice), np.max(image_matrice)
             new_image =  image_matrice
-            femur_center = nb_bone(image_matrice)
-
             for x,y in femur_center:
                 for i in range(-5, 6):
                     try:
@@ -112,6 +111,7 @@ for id_patient in range(17,Max_id_patient):
                         new_image[int(x)][int(y + i)] = pixelReplace 
                     except IndexError:
                         print("index error")
+                        
 
             x1,y1 = femur_center[0]
             x2,y2 = femur_center[1]
@@ -126,7 +126,7 @@ for id_patient in range(17,Max_id_patient):
         for new_image in Bone_Image:
             dx = x2 - x1
             dy = y2 - y1
-            d = -110
+            d = -120
             norme = math.sqrt(dx**2 + dy**2)
 
             # Normalisation du vecteur 
@@ -153,14 +153,18 @@ for id_patient in range(17,Max_id_patient):
 
         taille_f = 100 # pixels = taille_f **2 
         conteurH, conteurF = 0,0
+
         for ind in range(0,len(res)):
             image = derniers_fichiers_dicom[ind]
-            fenetre = image[int(x - taille_f // 2) : int(x + taille_f // 2 + 1),
-                        int(y - taille_f // 2 ): int(y + taille_f // 2 + 1)]
+            final_image = image.astype("float32")
+            final_image /= np.max(final_image)
+            fenetre = final_image[int(x - taille_f // 2) : int(x + taille_f // 2 ),
+                    int(y - taille_f // 2 ): int(y + taille_f // 2 )]
 
-            pixels_blanc = np.sum(fenetre > 0)
+            pixels_blanc = np.sum(fenetre > 0.15)
             #print(pixels_blanc)
-            if pixels_blanc > 5000 :
+  
+            if pixels_blanc > 4000 :
                 conteurH +=1
             else:
                 conteurF +=1
